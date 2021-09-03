@@ -15,9 +15,9 @@ class AnnouncementPipe:
         self.announce_queue = queue.SimpleQueue()
         self.state_callback = state_callback
         self.prepare = prepare
+        self.prep_queue = queue.SimpleQueue()
         self.restore = restore
-        self.event = threading.Event()
-
+        self.restore_event = threading.Event()
         self.thread = threading.Thread(target=self.__run)
         self.thread.start()
 
@@ -36,10 +36,10 @@ class AnnouncementPipe:
 
             # Prepare for announcement(s)
             _LOGGER.debug("Requesting preparation")
-            self.event.clear()
-            self.prepare(self.event)
-            self.event.wait()
-            _LOGGER.debug("Preparation complete")
+            self.restore_event.clear()
+            self.prepare(self.prep_queue)
+            prep_data = self.prep_queue.get()
+            _LOGGER.info("Preparation complete: %s", str(prep_data))
 
             # Play announcement
             self.__play(url)
@@ -57,9 +57,9 @@ class AnnouncementPipe:
 
             # Restore after announcement(s)
             _LOGGER.debug("Requesting restore")
-            self.event.clear()
-            self.restore(self.event)
-            self.event.wait()
+            self.restore_event.clear()
+            self.restore(prep_data, self.restore_event)
+            self.restore_event.wait()
             _LOGGER.debug("Restore complete")
 
             # Invoke state update

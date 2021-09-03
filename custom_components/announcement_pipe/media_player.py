@@ -63,13 +63,13 @@ class AnnouncementPipeEntity(MediaPlayerEntity):
         self._state = STATE_PLAYING if playing else STATE_IDLE
         self.schedule_update_ha_state()
 
-    def __prepare(self, done):
-        self._hass.bus.listen_once("prepared_for_announcement", lambda event: done.set())
+    def __prepare(self, queue):
+        self._hass.bus.listen_once("prepared_for_announcement", lambda event: queue.put(event.as_dict()['data']))
         self._hass.bus.fire("prepare_for_announcement", {})
 
-    def __restore(self, done):
+    def __restore(self, prep_data, done):
         self._hass.bus.listen_once("restored_after_announcement", lambda event: done.set())
-        self._hass.bus.fire("restore_after_announcement", {})
+        self._hass.bus.fire("restore_after_announcement", prep_data)
 
     def __shutdown(self):
         self._pipe.close()
