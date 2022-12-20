@@ -69,7 +69,7 @@ class AnnouncementPipe:
 
     def __play(self, url):
         _LOGGER.info("Playing announcement %s", url)
-        res = subprocess.run(['ffmpeg', '-y', '-i', url, '-f', 'u16le', '-acodec', 'pcm_s16le', '-ac',
+        res = subprocess.run(['ffmpeg', '-y', '-re', '-i', url, '-f', 'u16le', '-acodec', 'pcm_s16le', '-ac',
                              '2', '-ar', '48000', '-filter:a', 'volume=' + str(self.filter_volume), self.output_pipe],
                              capture_output=True, text=True)
         _LOGGER.debug('FFmpeg output: %s', res.stderr)
