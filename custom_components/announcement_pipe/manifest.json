@@ -1,5 +1,6 @@
 {
   "domain": "announcement_pipe",
+  "version": "1.0.0",
   "name": "Announcement Pipe",
   "documentation": "",
   "requirements": [],

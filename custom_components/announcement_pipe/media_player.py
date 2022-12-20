@@ -4,6 +4,7 @@ from .announcement_pipe import AnnouncementPipe
 
 import voluptuous as vol
 
+from homeassistant.components import media_source
 from homeassistant.components.media_player import PLATFORM_SCHEMA, MediaPlayerEntity
 from homeassistant.components.media_player.const import (
     MEDIA_TYPE_MUSIC,
@@ -14,6 +15,8 @@ from homeassistant.components.media_player.const import (
 from homeassistant.components.media_player.const import SUPPORT_VOLUME_SET
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_IDLE, STATE_PLAYING
 import homeassistant.helpers.config_validation as cv
+
+from homeassistant.helpers.network import get_url
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -104,10 +107,19 @@ class AnnouncementPipeEntity(MediaPlayerEntity):
         """Return the state of the player."""
         return self._state
 
-    def play_media(self, media_type, media_id, **kwargs):
+    async def async_play_media(self, media_type, media_id, **kwargs):
         """Play media."""
 
+        _LOGGER.info('Playing media %s ', media_id)
+
         if media_type != MEDIA_TYPE_MUSIC:
-            _LOGGER.error("invalid media type")
+            _LOGGER.error('media type %s is not supported', media_type)
             return
-        self._pipe.make_announcement(media_id)
+
+        if media_source.is_media_source_id(media_id):
+            resolved_media = await media_source.async_resolve_media(self._hass, media_id, self.entity_id)
+            url = get_url(self._hass) + resolved_media.url
+            _LOGGER.info('Announcement media resolved %s -> %s', media_id, url)
+            self._pipe.make_announcement(url)
+        else:
+            _LOGGER.info('Not a media source %s', media_id)
