@@ -38,8 +38,13 @@ class AnnouncementPipe:
             _LOGGER.debug("Requesting preparation")
             self.restore_event.clear()
             self.prepare(self.prep_queue)
-            prep_data = self.prep_queue.get()
-            _LOGGER.info("Preparation complete: %s", str(prep_data))
+            try:
+                prep_data = self.prep_queue.get(timeout=10)
+                _LOGGER.info("Preparation complete: %s", str(prep_data))
+            except queue.Empty:
+                prep_data = None
+                _LOGGER.warn("Timed out waiting for preparation")
+
 
             # Play announcement
             self.__play(url)
@@ -56,11 +61,18 @@ class AnnouncementPipe:
             sleep(1)
 
             # Restore after announcement(s)
-            _LOGGER.debug("Requesting restore")
-            self.restore_event.clear()
-            self.restore(prep_data, self.restore_event)
-            self.restore_event.wait()
-            _LOGGER.debug("Restore complete")
+            if prep_data is not None:
+                _LOGGER.debug("Requesting restore")
+                self.restore_event.clear()
+                self.restore(prep_data, self.restore_event)
+                if self.restore_event.wait(timeout=10):
+                    _LOGGER.debug("Restore complete")
+                else:
+                    _LOGGER.warn("Timed out waiting for restore")
+
+            else:
+                _LOGGER.warn("Skipping restore request (no prep_data available)")
+
 
             # Invoke state update
             self.state_callback(False)
