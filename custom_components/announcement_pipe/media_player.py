@@ -5,14 +5,12 @@ from .announcement_pipe import AnnouncementPipe
 import voluptuous as vol
 
 from homeassistant.components import media_source
-from homeassistant.components.media_player import PLATFORM_SCHEMA, MediaPlayerEntity
-from homeassistant.components.media_player.const import (
-    MEDIA_TYPE_MUSIC,
-    SUPPORT_PLAY_MEDIA,
-    SUPPORT_VOLUME_SET,
+from homeassistant.components.media_player import (
+    PLATFORM_SCHEMA,
+    MediaPlayerEntity,
+    MediaPlayerEntityFeature,
+    MediaType,
 )
-
-from homeassistant.components.media_player.const import SUPPORT_VOLUME_SET
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_IDLE, STATE_PLAYING
 import homeassistant.helpers.config_validation as cv
 
@@ -26,8 +24,8 @@ CONF_VOLUME = "volume"
 DOMAIN = "announcement_pipe"
 
 SUPPORT_ANNOUNCEMENT_PIPE = (
-    SUPPORT_VOLUME_SET
-    | SUPPORT_PLAY_MEDIA
+    MediaPlayerEntityFeature.VOLUME_SET
+    | MediaPlayerEntityFeature.PLAY_MEDIA
 )
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -67,12 +65,12 @@ class AnnouncementPipeEntity(MediaPlayerEntity):
         self.schedule_update_ha_state()
 
     def __prepare(self, queue):
-        self._hass.bus.listen_once("prepared_for_announcement", lambda event: queue.put(event.as_dict()['data']))
-        self._hass.bus.fire("prepare_for_announcement", {})
+        self._hass.bus.listen_once("announcement.prepared", lambda event: queue.put(event.as_dict()['data']))
+        self._hass.bus.fire("announcement.prepare", {})
 
     def __restore(self, prep_data, done):
-        self._hass.bus.listen_once("restored_after_announcement", lambda event: done.set())
-        self._hass.bus.fire("restore_after_announcement", prep_data)
+        self._hass.bus.listen_once("announcement.restored", lambda event: done.set())
+        self._hass.bus.fire("announcement.restore", prep_data)
 
     def __shutdown(self):
         self._pipe.close()
@@ -112,7 +110,7 @@ class AnnouncementPipeEntity(MediaPlayerEntity):
 
         _LOGGER.info('Playing media %s ', media_id)
 
-        if media_type != MEDIA_TYPE_MUSIC:
+        if media_type != MediaType.MUSIC:
             _LOGGER.error('media type %s is not supported', media_type)
             return
 
